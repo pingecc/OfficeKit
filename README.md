@@ -58,23 +58,45 @@ Windows 用户：安装 [LibreOffice](https://www.libreoffice.org/download) 后 
 
 ## 桌面端（Tauri 2 · macOS / Windows）
 
-```bash
-# 开发迭代（需 Rust：rustup；CLI：npm i -g @tauri-apps/cli）
-cd desktop && tauri dev
+### 日常开发（最常用）
 
-# 构建安装包（改了引擎代码后先重打 sidecar）
-.venv/bin/pyinstaller --onefile --name officekit-engine --paths engine \
-  --distpath desktop/src-tauri/binaries --workpath /tmp/officekit-pyi \
-  --specpath /tmp/officekit-pyi -y scripts/engine_entry.py
-mv desktop/src-tauri/binaries/officekit-engine \
-   desktop/src-tauri/binaries/officekit-engine-aarch64-apple-darwin   # macOS arm；Windows 为 -x86_64-pc-windows-msvc.exe
-cd desktop && tauri build   # 产物：desktop/src-tauri/target/release/bundle/
+```bash
+cd desktop
+tauri dev            # 起开发版应用：前端热更新，改代码不用重新打包
 ```
 
-Windows 安装包由 CI 出（Python sidecar 无法交叉编译）：推送 `v*` 标签或手动触发
-`.github/workflows/build.yml`（macOS arm/intel + Windows 三平台矩阵）。
+- 若提示找不到 `cargo`：先执行 `export PATH="$HOME/.cargo/bin:$PATH"`（或重开一个终端）
+- 首次启动要编译 debug 依赖（几分钟），之后增量秒起
+- **关闭窗口 = 停止开发模式**；想再看效果重新执行 `tauri dev` 即可
 
-> 注：仅「Office 转 PDF」依赖本机 LibreOffice（应用会自动检测并引导安装），其余功能无此依赖。
+改代码后的生效方式：
+
+| 改哪里 | 生效方式 |
+|---|---|
+| `desktop/src-ui/`（界面） | **保存即热更新**，窗口内容直接变 |
+| `desktop/src-tauri/`（Rust 壳） | 自动重编译并重启应用 |
+| `engine/`（Python 引擎） | 见下方「引擎开发循环」 |
+
+### 引擎开发循环（Python，不用打包即可验证）
+
+```bash
+.venv/bin/pytest engine/tests -v                             # 1) 跑测试
+.venv/bin/officekit pdf2word demo/report.pdf -o /tmp/t.docx  # 2) CLI 直测转换效果
+scripts/rebuild_sidecar.sh                                   # 3) 要在 GUI 里验证时重打 sidecar
+                                                             #    dev 窗口下一次转换即生效，无需重启
+```
+
+### 出安装包 / 发版
+
+```bash
+cd desktop && tauri build   # 本机安装包：desktop/src-tauri/target/release/bundle/
+```
+
+三平台正式发版：`git tag vX.Y.Z && git push origin vX.Y.Z`，CI 自动构建并挂到
+[Releases](https://github.com/pingecc/OfficeKit/releases)。Windows 包只能由 CI 出（Python sidecar
+无法交叉编译），也可在 Actions 页手动触发。
+
+> 注：仅「Office 转 PDF」依赖本机 LibreOffice（应用自动检测并提示安装），其余功能无此依赖。
 
 ## 项目结构
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Button, Message, Progress, Tag, Typography } from '@arco-design/web-react';
 import { IconClose, IconFile, IconFolder } from '@arco-design/web-react/icon';
 import Dropzone from '../components/Dropzone';
@@ -9,13 +9,18 @@ const { Text } = Typography;
 
 const OFFICE_EXTS = ['.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt'];
 
+/** 进度卡片延迟出现的阈值：1.5 秒内能完成的转换不值得显示进度条 */
+const PROGRESS_DELAY_MS = 1500;
+
 export default function Office2Pdf({ engine }: { engine: EngineStatus | null }) {
   const [files, setFiles] = useState<string[]>([]);
   const [outDir, setOutDir] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const [results, setResults] = useState<OfficeResultItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { progress, resetProgress } = useEngineProgress();
+  const progressTimer = useRef<number | undefined>(undefined);
 
   const addFiles = (ps: string[]) =>
     setFiles((old) => [...old, ...ps.filter((p) => !old.includes(p))]);
@@ -26,6 +31,8 @@ export default function Office2Pdf({ engine }: { engine: EngineStatus | null }) 
     resetProgress();
     setResults(null);
     setError(null);
+    setShowProgress(false);
+    progressTimer.current = window.setTimeout(() => setShowProgress(true), PROGRESS_DELAY_MS);
     try {
       const r = await office2pdf(files, outDir);
       setResults(r.results);
@@ -33,8 +40,11 @@ export default function Office2Pdf({ engine }: { engine: EngineStatus | null }) 
     } catch (e) {
       setError(String(e));
       Message.error('转换失败');
+    } finally {
+      window.clearTimeout(progressTimer.current);
+      setShowProgress(false);
+      setRunning(false);
     }
-    setRunning(false);
   };
 
   if (engine && !engine.soffice) {
@@ -101,7 +111,7 @@ export default function Office2Pdf({ engine }: { engine: EngineStatus | null }) 
         </div>
       )}
 
-      {running && (
+      {running && showProgress && (
         <div className="card">
           <Progress percent={progress.percent} showText />
           <div className="progress-msg">{progress.stage || '正在转换…'}</div>

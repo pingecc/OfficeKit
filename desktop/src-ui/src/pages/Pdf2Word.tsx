@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Input, Message, Progress, Result, Space, Typography } from '@arco-design/web-react';
 import { IconClose, IconFilePdf, IconFolder } from '@arco-design/web-react/icon';
 import Dropzone from '../components/Dropzone';
@@ -7,14 +7,19 @@ import { basename, dirname, openPath, pdf2word, pickSave } from '../api';
 
 const { Text } = Typography;
 
+/** 进度卡片延迟出现的阈值：1.5 秒内能完成的转换不值得显示进度条 */
+const PROGRESS_DELAY_MS = 1500;
+
 export default function Pdf2Word() {
   const [file, setFile] = useState<string | null>(null);
   const [outFile, setOutFile] = useState<string | null>(null);
   const [pages, setPages] = useState('');
   const [running, setRunning] = useState(false);
+  const [showProgress, setShowProgress] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { progress, resetProgress } = useEngineProgress();
+  const progressTimer = useRef<number | undefined>(undefined);
 
   const run = async () => {
     if (!file || running) return;
@@ -22,14 +27,19 @@ export default function Pdf2Word() {
     resetProgress();
     setResult(null);
     setError(null);
+    setShowProgress(false);
+    progressTimer.current = window.setTimeout(() => setShowProgress(true), PROGRESS_DELAY_MS);
     try {
       const r = await pdf2word(file, outFile, pages.trim() || null);
       setResult(r.output);
     } catch (e) {
       setError(String(e));
       Message.error('转换失败');
+    } finally {
+      window.clearTimeout(progressTimer.current);
+      setShowProgress(false);
+      setRunning(false);
     }
-    setRunning(false);
   };
 
   if (!file) {
@@ -107,7 +117,7 @@ export default function Pdf2Word() {
         </Space>
       </div>
 
-      {running && (
+      {running && showProgress && (
         <div className="card">
           <Progress percent={progress.percent} showText />
           <div className="progress-msg">{progress.stage || '正在转换…'}</div>
