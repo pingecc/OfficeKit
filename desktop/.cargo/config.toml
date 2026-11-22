@@ -1,0 +1,9 @@
+# 国内网络下加速 crates.io 下载（如需恢复官方源，删除本文件即可）
+[source.crates-io]
+replace-with = 'rsproxy-sparse'
+
+[source.rsproxy-sparse]
+registry = "sparse+https://rsproxy.cn/index/"
+
+[registries.rsproxy]
+index = "sparse+https://rsproxy.cn/index/"

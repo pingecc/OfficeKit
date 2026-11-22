@@ -1,0 +1,74 @@
+# OfficeKit —— 桌面端多平台构建
+# 触发：手动 dispatch 或推送 v* 标签。产物上传到 Actions Artifacts（打 tag 时同时创建 Release）。
+#
+# 说明：Python sidecar 无法交叉编译，因此每平台各自跑 PyInstaller；
+#       tauri.conf.json 的 externalBin 约定文件名带 target-triple 后缀。
+
+name: build-desktop
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14            # Apple Silicon
+            triple: aarch64-apple-darwin
+            sidecar_ext: ""
+          - os: macos-13            # Intel
+            triple: x86_64-apple-darwin
+            sidecar_ext: ""
+          - os: windows-latest
+            triple: x86_64-pc-windows-msvc
+            sidecar_ext: ".exe"
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 1) 引擎 + sidecar
+      - name: Build officekit-engine sidecar
+        run: |
+          pip install -e "engine[dev]"
+          pyinstaller --onefile --name officekit-engine --paths engine `
+            --distpath desktop/src-tauri/binaries --workpath build-pyi --specpath build-pyi -y `
+            scripts/engine_entry.py
+        shell: bash
+
+      - name: Rename sidecar to target triple
+        run: |
+          mv desktop/src-tauri/binaries/officekit-engine${{ matrix.sidecar_ext }} \
+             desktop/src-tauri/binaries/officekit-engine-${{ matrix.triple }}${{ matrix.sidecar_ext }}
+        shell: bash
+
+      # 2) 桌面壳层
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: desktop
+          tagName: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/') && format('OfficeKit {0}', github.ref_name) || '' }}
+          args: --config src-tauri/tauri.conf.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: officekit-${{ matrix.triple }}
+          path: |
+            desktop/src-tauri/target/release/bundle/**/*.app
+            desktop/src-tauri/target/release/bundle/**/*.dmg
+            desktop/src-tauri/target/release/bundle/**/*.exe
+            desktop/src-tauri/target/release/bundle/**/*.msi
+          if-no-files-found: error

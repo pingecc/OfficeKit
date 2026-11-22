@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "officekit-engine"
+version = "0.1.0"
+description = "OfficeKit —— 办公工具箱 · 文档处理引擎"
+requires-python = ">=3.10"
+dependencies = [
+    "pdf2docx>=0.5.8",
+    "python-docx>=1.1.0",
+    "openpyxl>=3.1.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pyinstaller>=6.10", "pillow>=11.0"]
+
+[project.scripts]
+officekit = "officekit.cli:main"
+okit = "officekit.cli:main"
+
+[tool.setuptools]
+packages = ["officekit"]

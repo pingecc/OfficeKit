@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "OfficeKit 主窗口默认权限（应用自带命令 + 核心事件/应用信息）",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
