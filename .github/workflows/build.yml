@@ -6,6 +6,10 @@
 
 name: build-desktop
 
+# tauri-action 需要 contents:write 才能创建 Release 并上传安装包
+permissions:
+  contents: write
+
 on:
   workflow_dispatch:
   push:
@@ -39,8 +43,8 @@ jobs:
       - name: Build officekit-engine sidecar
         run: |
           pip install -e "engine[dev]"
-          pyinstaller --onefile --name officekit-engine --paths engine `
-            --distpath desktop/src-tauri/binaries --workpath build-pyi --specpath build-pyi -y `
+          pyinstaller --onefile --name officekit-engine --paths engine \
+            --distpath desktop/src-tauri/binaries --workpath build-pyi --specpath build-pyi -y \
             scripts/engine_entry.py
         shell: bash
 

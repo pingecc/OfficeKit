@@ -19,6 +19,18 @@
 
 完整路线图：[docs/roadmap.md](docs/roadmap.md)
 
+## 下载安装包
+
+普通用户无需配置环境，直接前往 **[Releases · 最新版](https://github.com/pingecc/OfficeKit/releases/latest)** 下载：
+
+| 平台 | 文件 |
+|---|---|
+| macOS（Apple Silicon / M 系） | `OfficeKit_*_aarch64.dmg` |
+| macOS（Intel） | `OfficeKit_*_x86_64.dmg` |
+| Windows 10/11 | `OfficeKit_*_x64-setup.exe`（安装版）或 `.msi` |
+
+> **首次打开提示**：安装包暂未做代码签名。macOS 提示「无法验证开发者」时：右键 App → 打开（或执行 `xattr -cr /Applications/OfficeKit.app`）；Windows SmartScreen 弹窗点「更多信息 → 仍要运行」。
+
 ## 快速开始
 
 ```bash
